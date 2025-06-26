@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crypto Price Checker</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; color: #333; }
+    h1 { text-align: center; color: #0077cc; }
+    form { max-width: 400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px;
+           box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    label, input { display: block; width: 100%; margin-bottom: 15px; }
+    input[type="text"], input[type="datetime-local"] { padding: 10px; font-size: 16px; }
+    button { background: #0077cc; color: white; padding: 10px; font-size: 16px; border: none; 
+             width: 100%; border-radius: 5px; }
+    #result { text-align: center; margin-top: 20px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>Crypto Price Checker</h1>
+  <form id="priceForm">
+    <label for="symbol">Coin Pair (e.g., BTCUSDT):</label>
+    <input type="text" id="symbol" name="symbol" required />
+    <label for="datetime">Date & Time (UTC):</label>
+    <input type="datetime-local" id="datetime" name="datetime" required />
+    <button type="submit">Check Price</button>
+  </form>
+  <div id="result"></div>
+  <script>
+    const form = document.getElementById('priceForm');
+    const resultDiv = document.getElementById('result');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const symbol = document.getElementById('symbol').value.trim().toUpperCase();
+      const datetime = new Date(document.getElementById('datetime').value);
+      const timestamp = datetime.getTime();
+      const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&startTime=${timestamp}&limit=1`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const price = parseFloat(data[0][4]).toFixed(6);
+          resultDiv.innerHTML = `<strong>${symbol}</strong> was <strong>$${price}</strong> at ${datetime.toUTCString()}`;
+        } else {
+          resultDiv.textContent = 'No price data found for that time.';
+        }
+      } catch (err) {
+        resultDiv.textContent = 'Error fetching data. Please check the coin symbol and time.';
+      }
+    });
+  </script>
+</body>
+</html>
