@@ -1,36 +1,39 @@
 import streamlit as st
-import pandas as pd
 import yfinance as yf
-from ta.momentum import RSIIndicator
-from ta.trend import MACD, EMAIndicator
-import plotly.graph_objs as go
+import plotly.graph_objects as go
+import pandas as pd
+import ta
 
-st.set_page_config(page_title="Crypto Signal Dashboard", layout="wide")
 st.title("📊 Crypto Signal Dashboard – RSI, MACD, EMA")
 
-coin = st.text_input("Enter a cryptocurrency symbol (e.g. BTC-USD, ETH-USD, SOL-USD):", value="BTC-USD")
-interval = st.selectbox("Select timeframe", ['1h', '1d'], index=0)
-days = st.slider("Select number of past days to analyze", 5, 90, 30)
-
 try:
-    df = yf.download(coin, period=f"{days}d", interval=interval)
-    df.dropna(inplace=True)
+    coin = st.text_input("Enter a cryptocurrency symbol (e.g. BTC-USD, ETH-USD, SOL-USD):", value="BTC-USD")
+    interval = st.selectbox("Select timeframe", ["1h", "4h", "1d"])
+    days = st.slider("Select number of past days to analyze", 5, 90, 30)
 
-    df['EMA50'] = EMAIndicator(df['Close'], window=50).ema_indicator()
-    df['EMA200'] = EMAIndicator(df['Close'], window=200).ema_indicator()
-    df['RSI'] = RSIIndicator(df['Close']).rsi()
-    macd = MACD(df['Close'])
-    df['MACD'] = macd.macd()
-    df['SignalLine'] = macd.macd_signal()
+    df = yf.download(tickers=coin, period=f"{days}d", interval=interval)
+
+    if df.empty:
+        st.warning("⚠️ No data found. Please check the symbol or time interval.")
+        st.stop()
+
+    df['EMA50'] = ta.trend.ema_indicator(df['Close'], window=50).ema_indicator().values.flatten()
+    df['EMA200'] = ta.trend.ema_indicator(df['Close'], window=200).ema_indicator().values.flatten()
+    df['RSI'] = ta.momentum.RSIIndicator(df['Close']).rsi().values.flatten()
+
+    macd = ta.trend.MACD(df['Close'])
+    df['MACD'] = macd.macd().values.flatten()
+    df['SignalLine'] = macd.macd_signal().values.flatten()
 
     latest = df.iloc[-1]
-    signal = "⏸ No clear signal"
-    if latest['RSI'] < 30 and latest['EMA50'] > latest['EMA200']:
-        signal = "✅ BUY Signal (Oversold RSI + Bullish EMA)"
-    elif latest['RSI'] > 70 and latest['EMA50'] < latest['EMA200']:
-        signal = "🔻 SELL Signal (Overbought RSI + Bearish EMA)"
+    signal = "⏸️ No clear signal"
 
-    st.subheader(f"📢 Trade Signal: {signal}")
+    if latest['RSI'] < 30 and latest['EMA50'] > latest['EMA200']:
+        signal = "✅ BUY Signal (Oversold RSI + EMA50 > EMA200)"
+    elif latest['RSI'] > 70 and latest['EMA50'] < latest['EMA200']:
+        signal = "🔻 SELL Signal (Overbought RSI + EMA50 < EMA200)"
+
+    st.subheader(f"📈 Trade Signal: {signal}")
     st.write(f"**Latest RSI:** {round(latest['RSI'], 2)}")
     st.write(f"**MACD:** {round(latest['MACD'], 4)}")
     st.write(f"**Signal Line:** {round(latest['SignalLine'], 4)}")
@@ -40,9 +43,10 @@ try:
         x=df.index,
         open=df['Open'], high=df['High'],
         low=df['Low'], close=df['Close'],
-        name='Candlesticks'))
-    fig.add_trace(go.Scatter(x=df.index, y=df['EMA50'].values.ravel(), name='EMA 50'))
-fig.add_trace(go.Scatter(x=df.index, y=df['RSI'].values.ravel(), name='RSI'))
+        name='Candlesticks'
+    ))
+    fig.add_trace(go.Scatter(x=df.index, y=df['EMA50'], name='EMA 50'))
+    fig.add_trace(go.Scatter(x=df.index, y=df['EMA200'], name='EMA 200'))
 
     fig.update_layout(
         title=f"{coin} Price Chart with EMA, RSI, MACD",
