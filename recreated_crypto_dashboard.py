@@ -41,8 +41,8 @@ try:
         open=df['Open'], high=df['High'],
         low=df['Low'], close=df['Close'],
         name='Candlesticks'))
-    fig.add_trace(go.Scatter(x=df.index, y=df['EMA50'], line=dict(color='blue'), name='EMA 50'))
-    fig.add_trace(go.Scatter(x=df.index, y=df['EMA200'], line=dict(color='red'), name='EMA 200'))
+    fig.add_trace(go.Scatter(x=df.index, y=df['EMA50'].values.ravel(), name='EMA 50'))
+fig.add_trace(go.Scatter(x=df.index, y=df['RSI'].values.ravel(), name='RSI'))
 
     fig.update_layout(
         title=f"{coin} Price Chart with EMA, RSI, MACD",
